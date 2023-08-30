@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +16,7 @@
             align-items: center;
             height: 100vh;
         }
+
         .container {
             text-align: center;
             background-color: #fff;
@@ -22,13 +24,16 @@
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
             padding: 20px;
         }
+
         h1 {
             color: #333;
             margin-bottom: 20px;
         }
+
         label {
             font-size: 18px;
         }
+
         input[type="text"] {
             width: 300px;
             padding: 10px;
@@ -37,6 +42,7 @@
             border-radius: 5px;
             margin-top: 10px;
         }
+
         button {
             padding: 10px 20px;
             font-size: 18px;
@@ -48,15 +54,24 @@
             margin-top: 20px;
             transition: background-color 0.3s ease;
         }
+
         button:hover {
             background-color: #0056b3;
         }
+
         .result {
             margin-top: 20px;
             font-size: 18px;
         }
+
+        .status {
+            margin-top: 10px;
+            font-size: 16px;
+            font-style: italic;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Twitter Sentiment Analysis</h1>
@@ -64,20 +79,113 @@
         <input type="text" id="keyword" placeholder="Enter a keyword">
         <button onclick="analyzeSentiment()">Analyze</button>
         <div class="result" id="result"></div>
+        <div class="status" id="status"></div> <!-- Added status element -->
     </div>
 
-    <script src="https://unpkg.com/textblob"></script>
     <script>
-        function analyzeSentiment() {
+        async function fetchDataFromTwitter(keyword) {
+            const url = 'https://twitter-scraper2.p.rapidapi.com/search?searchTerms=' + keyword + '&maxTweets=100';
+            const options = {
+                method: 'GET',
+                headers: {
+                    'X-RapidAPI-Key': '8a1bf1e668mshe3e15e25f560c23p1f8091jsn2bc2c3c91f54',
+                    'X-RapidAPI-Host': 'twitter-scraper2.p.rapidapi.com'
+                }
+            };
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                const tweets = data.data;
+
+                const extractedData = [];
+
+                tweets.forEach((tweet, index) => {
+                    // Create an object with id, language, and text
+                    const tweetObject = {
+                        id: index + 1,
+                        language: 'en',
+                        text: tweet.tweet.full_text
+                    };
+
+                    extractedData.push(tweetObject);
+                });
+
+                return extractedData; // Return the extracted data as an array of objects
+            } catch (error) {
+                console.error(error);
+                return null;
+            }
+        }
+
+        async function analyzeSentiment() {
             const keyword = document.getElementById('keyword').value;
 
-            // You would replace this with your code to fetch data from Twitter
-            // For simplicity, we'll generate a random sentiment score here
-            const sentimentScore = Math.random() * 100;
-            const sentiment = getSentimentLabel(sentimentScore);
+            // Display a status message while fetching data
+            const statusElement = document.getElementById('status');
+            statusElement.innerHTML = 'Fetching data from Twitter...';
 
-            const resultElement = document.getElementById('result');
-            resultElement.innerHTML = `Keyword: ${keyword}<br>Sentiment Score: ${sentimentScore.toFixed(2)}<br>Sentiment: ${sentiment}`;
+            const twitterData = await fetchDataFromTwitter(keyword);
+
+            if (twitterData) {
+                const resultElement = document.getElementById('result');
+                resultElement.innerHTML = ''; // Clear previous results
+
+                for (const tweet of twitterData) {
+                    // Display a status message for each tweet being analyzed
+                    statusElement.innerHTML = `Analyzing sentiment for tweet: ${tweet.id}`;
+
+                    const sentimentData = await fetchSentiment(tweet.text);
+                    if (sentimentData) {
+                        const sentimentLabel = getSentimentLabel(sentimentData.sentiment);
+                        resultElement.innerHTML += `
+                            <div>
+                                <strong>Tweet:</strong> ${tweet.text}<br>
+                                <strong>Sentiment Score:</strong> ${sentimentData.sentiment.toFixed(2)}<br>
+                                <strong>Sentiment:</strong> ${sentimentLabel}
+                            </div>
+                            <hr>
+                        `;
+                    }
+                }
+
+                // Clear the status message when analysis is complete
+                statusElement.innerHTML = 'Analysis complete.';
+            }
+        }
+
+        async function fetchSentiment(extractedData) {
+            const url = 'https://sentiment-analysis9.p.rapidapi.com/sentiment';
+            const options = {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    Accept: 'application/json',
+                    'X-RapidAPI-Key': '8a1bf1e668mshe3e15e25f560c23p1f8091jsn2bc2c3c91f54',
+                    'X-RapidAPI-Host': 'sentiment-analysis9.p.rapidapi.com'
+                },
+                body: JSON.stringify(extractedData) // Pass the extracted data array here
+            };
+
+            try {
+                const response = await fetch(url, options);
+                const results = await response.json();
+
+                // Calculate the average sentiment score
+                let totalSentimentScore = 0;
+                for (const result of results) {
+                    totalSentimentScore += result.sentiment;
+                }
+                const averageSentimentScore = totalSentimentScore / results.length;
+
+                // Display the results to the user
+                console.log('Sentiment Analysis Results:');
+                console.log('Average Sentiment Score:', averageSentimentScore.toFixed(2));
+
+                // You can further process or display the results as needed
+            } catch (error) {
+                console.error(error);
+            }
         }
 
         function getSentimentLabel(score) {
@@ -91,4 +199,5 @@
         }
     </script>
 </body>
+
 </html>
