@@ -79,7 +79,7 @@
         <input type="text" id="keyword" placeholder="Enter a keyword">
         <button onclick="analyzeSentiment()">Analyze</button>
         <div class="result" id="result"></div>
-        <div class="status" id="status"></div> <!-- Added status element -->
+        <div class="status" id="status"></div>
     </div>
 
     <script>
@@ -111,7 +111,7 @@
                     extractedData.push(tweetObject);
                 });
 
-                return extractedData; // Return the extracted data as an array of objects
+                return extractedData;
             } catch (error) {
                 console.error(error);
                 return null;
@@ -120,83 +120,108 @@
 
         async function analyzeSentiment() {
             const keyword = document.getElementById('keyword').value;
-
-            // Display a status message while fetching data
             const statusElement = document.getElementById('status');
+            const resultElement = document.getElementById('result');
             statusElement.innerHTML = 'Fetching data from Twitter...';
 
             const twitterData = await fetchDataFromTwitter(keyword);
 
             if (twitterData) {
-                const resultElement = document.getElementById('result');
                 resultElement.innerHTML = ''; // Clear previous results
 
-                for (const tweet of twitterData) {
-                    // Display a status message for each tweet being analyzed
-                    statusElement.innerHTML = `Analyzing sentiment for tweet: ${tweet.id}`;
+                let overallSentimentScore = 0;
+                let overallSentiment = 'neutral'; // Initialize overall sentiment
 
+                for (const tweet of twitterData) {
+                    statusElement.innerHTML = `Analyzing sentiment for tweet: ${tweet.id}`;
                     const sentimentData = await fetchSentiment(tweet.text);
+
                     if (sentimentData) {
-                        const sentimentLabel = getSentimentLabel(sentimentData.sentiment);
                         resultElement.innerHTML += `
                             <div>
                                 <strong>Tweet:</strong> ${tweet.text}<br>
-                                <strong>Sentiment Score:</strong> ${sentimentData.sentiment.toFixed(2)}<br>
-                                <strong>Sentiment:</strong> ${sentimentLabel}
+                                <strong>Sentiment Score:</strong> ${sentimentData.score}<br>
+                                <strong>Sentiment:</strong> ${sentimentData.sentiment}
                             </div>
                             <hr>
                         `;
+
+                        // Add the individual sentiment scores to the overall score
+                        overallSentimentScore += sentimentData.score;
+
+                        // Determine the overall sentiment based on individual scores
+                        if (sentimentData.sentiment === 'positive') {
+                            overallSentiment = 'positive';
+                        } else if (sentimentData.sentiment === 'negative') {
+                            overallSentiment = 'negative';
+                        }
                     }
                 }
 
-                // Clear the status message when analysis is complete
+                // Calculate the average score
+                const averageScore = twitterData.length > 0 ? overallSentimentScore / twitterData.length : 0;
+
+                // Display overall sentiment and score
+                resultElement.innerHTML += `
+                    <div>
+                        <strong>Overall Sentiment:</strong> ${overallSentiment}<br>
+                        <strong>Overall Sentiment Score:</strong> ${averageScore.toFixed(2)}
+                    </div>
+                `;
+
                 statusElement.innerHTML = 'Analysis complete.';
             }
         }
 
-        async function fetchSentiment(extractedData) {
-            const url = 'https://sentiment-analysis9.p.rapidapi.com/sentiment';
-            const options = {
-                method: 'POST',
-                headers: {
-                    'content-type': 'application/json',
-                    Accept: 'application/json',
-                    'X-RapidAPI-Key': '8a1bf1e668mshe3e15e25f560c23p1f8091jsn2bc2c3c91f54',
-                    'X-RapidAPI-Host': 'sentiment-analysis9.p.rapidapi.com'
-                },
-                body: JSON.stringify(extractedData) // Pass the extracted data array here
-            };
+        async function fetchSentiment(text) {
+    const url = 'https://sentiment-analysis9.p.rapidapi.com/sentiment';
+    const options = {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            Accept: 'application/json',
+            'X-RapidAPI-Key': '12edbf5b3cmshd367dd90b6fb591p1f9fefjsnffe50ad28559',
+            'X-RapidAPI-Host': 'sentiment-analysis9.p.rapidapi.com'
+        },
+        body: JSON.stringify([
+            {
+                id: '1',
+                language: 'en',
+                text: text,
+            }
+        ])
+    };
 
-            try {
-                const response = await fetch(url, options);
-                const results = await response.json();
+    try {
+        const response = await fetch(url, options);
+        const results = await response.json();
 
-                // Calculate the average sentiment score
-                let totalSentimentScore = 0;
-                for (const result of results) {
-                    totalSentimentScore += result.sentiment;
-                }
-                const averageSentimentScore = totalSentimentScore / results.length;
+        // Assuming the response is an array with a single object
+        if (Array.isArray(results) && results.length > 0) {
+            const sentimentData = results[0];
 
-                // Display the results to the user
-                console.log('Sentiment Analysis Results:');
-                console.log('Average Sentiment Score:', averageSentimentScore.toFixed(2));
+            // Assuming there's a single prediction in the predictions array
+            if (
+                sentimentData.predictions &&
+                Array.isArray(sentimentData.predictions) &&
+                sentimentData.predictions.length > 0
+            ) {
+                const prediction = sentimentData.predictions[0];
 
-                // You can further process or display the results as needed
-            } catch (error) {
-                console.error(error);
+                return {
+                    sentiment: prediction.prediction,
+                    score: prediction.probability
+                };
             }
         }
 
-        function getSentimentLabel(score) {
-            if (score < 30) {
-                return 'Negative';
-            } else if (score < 70) {
-                return 'Neutral';
-            } else {
-                return 'Positive';
-            }
-        }
+        return null; // Handle the case where the response format is unexpected
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+}
+
     </script>
 </body>
 
