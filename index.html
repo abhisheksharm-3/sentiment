@@ -23,6 +23,8 @@
             border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
             padding: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         h1 {
@@ -174,53 +176,53 @@
         }
 
         async function fetchSentiment(text) {
-    const url = 'https://sentiment-analysis9.p.rapidapi.com/sentiment';
-    const options = {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            Accept: 'application/json',
-            'X-RapidAPI-Key': '12edbf5b3cmshd367dd90b6fb591p1f9fefjsnffe50ad28559',
-            'X-RapidAPI-Host': 'sentiment-analysis9.p.rapidapi.com'
-        },
-        body: JSON.stringify([
-            {
-                id: '1',
-                language: 'en',
-                text: text,
-            }
-        ])
-    };
+            const url = 'https://sentiment-analysis9.p.rapidapi.com/sentiment';
+            const options = {
+                method: 'POST',
+                headers: {
+                    'content-type': 'application/json',
+                    Accept: 'application/json',
+                    'X-RapidAPI-Key': '12edbf5b3cmshd367dd90b6fb591p1f9fefjsnffe50ad28559',
+                    'X-RapidAPI-Host': 'sentiment-analysis9.p.rapidapi.com'
+                },
+                body: JSON.stringify([
+                    {
+                        id: '1',
+                        language: 'en',
+                        text: text,
+                    }
+                ])
+            };
 
-    try {
-        const response = await fetch(url, options);
-        const results = await response.json();
+            try {
+                const response = await fetch(url, options);
+                const results = await response.json();
 
-        // Assuming the response is an array with a single object
-        if (Array.isArray(results) && results.length > 0) {
-            const sentimentData = results[0];
+                // Assuming the response is an array with a single object
+                if (Array.isArray(results) && results.length > 0) {
+                    const sentimentData = results[0];
 
-            // Assuming there's a single prediction in the predictions array
-            if (
-                sentimentData.predictions &&
-                Array.isArray(sentimentData.predictions) &&
-                sentimentData.predictions.length > 0
-            ) {
-                const prediction = sentimentData.predictions[0];
+                    // Assuming there's a single prediction in the predictions array
+                    if (
+                        sentimentData.predictions &&
+                        Array.isArray(sentimentData.predictions) &&
+                        sentimentData.predictions.length > 0
+                    ) {
+                        const prediction = sentimentData.predictions[0];
 
-                return {
-                    sentiment: prediction.prediction,
-                    score: prediction.probability
-                };
+                        return {
+                            sentiment: prediction.prediction,
+                            score: prediction.probability
+                        };
+                    }
+                }
+
+                return null; // Handle the case where the response format is unexpected
+            } catch (error) {
+                console.error(error);
+                return null;
             }
         }
-
-        return null; // Handle the case where the response format is unexpected
-    } catch (error) {
-        console.error(error);
-        return null;
-    }
-}
 
     </script>
 </body>
